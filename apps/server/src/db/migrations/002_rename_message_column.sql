@@ -1,1 +1,12 @@
-alter table messages rename column message to text;
+-- DO $$
+-- BEGIN
+--   -- rename messages.message -> messages.text, but only if the old column exists
+--   IF EXISTS (
+--     SELECT 1
+--     FROM information_schema.columns
+--     WHERE table_name = 'messages'
+--       AND column_name = 'message'
+--   ) THEN
+--     ALTER TABLE messages RENAME COLUMN message TO text;
+--   END IF;
+-- END $$;
