@@ -18,11 +18,13 @@
 ## 🧭 Getting started (local development)
 
 Prereqs
+
 - Node.js (16+)
 - PostgreSQL
 - Optional: Redis (if you want caching)
 
 Steps
+
 1. Clone the repo:
    - git clone <repo-url>
    - cd ai-chat
@@ -32,7 +34,7 @@ Steps
 3. Copy environment templates
    - cp apps/server/.env.example apps/server/.env
    - cp apps/web/.env.example apps/web/.env (optional)
-   - Edit `.env` values (DATABASE_URL, GROQ_API_KEY / OPENAI_API_KEY, REDIS_* if used)
+   - Edit `.env` values (DATABASE*URL, GROQ_API_KEY / OPENAI_API_KEY, REDIS*\* if used)
 4. Run DB migrations
    - cd apps/server
    - npm run migrate
@@ -72,6 +74,7 @@ Run them with:
 - npm run migrate
 
 Current schema (summary):
+
 - `conversations` (id: uuid, created_at)
 - `messages` (id, conversation_id, sender: enum('user','ai'), text, created_at)
 
@@ -82,12 +85,14 @@ No seed script is required: agent FAQ/domain knowledge is embedded in the system
 ## 🔌 API reference
 
 POST /chat/message
+
 - Body: `{ message: string, sessionId?: string }`
 - Validations: non-empty message, max length enforced (zod schema)
 - Response: `{ reply: string, sessionId: string }`
 - Flow: validate → create/get conversation → persist user message → call LLM → persist AI reply → return reply & sessionId
 
 GET /chat/history?sessionId=<uuid>
+
 - Response: `{ sessionId, messages: [{ sender, text }] }`
 - Histories are cached in Redis (short TTL) if configured.
 
@@ -98,7 +103,9 @@ Rate limiting: `POST /chat/message` is limited to 20 requests/min per IP via `ex
 ## 🗂️ Architecture & structure
 
 High level
+
 - `apps/server/src`
+
   - `index.ts` — Express bootstrap
   - `chat/` — `chat.routes.ts`, `chat.schema.ts`, `chat.service.ts` (routes → services → db/llm)
   - `llm/` — `openai.ts` (client), `prompt.ts` (system prompt)
@@ -111,6 +118,7 @@ High level
   - `api.ts` — helper functions to call backend
 
 Design choices
+
 - Clean separation of concerns (routes → services → adapters)
 - LLM interaction encapsulated in `src/llm/` so provider or model can be swapped easily
 - Short Redis TTL for history caching to balance freshness vs. DB load
@@ -121,16 +129,19 @@ Design choices
 ## 🤖 LLM & Prompt notes
 
 Provider & client
+
 - The code uses the official `openai` NPM client configured for a Groq/OpenAI-compatible endpoint (see `apps/server/src/llm/openai.ts`).
 - Model used: `llama-3.3-70b-versatile` (configured in code)
 - Request options: `temperature: 0.2`, `max_tokens: 300` (keeps replies concise and cost-bounded)
 
 Prompt
+
 - System prompt (see `apps/server/src/llm/prompt.ts`):
   - "You are a helpful support agent for a small e-commerce store. Answer clearly and concisely." + simple FAQ (shipping, returns, support hours).
 - Conversation history is included in the LLM call for context.
 
 Error handling
+
 - LLM failures are caught and translated to friendly messages (rate limits, auth errors, generic failure), so the UI shows a clear error message instead of crashing.
 
 ---
@@ -170,8 +181,8 @@ Error handling
 Send a message:
 
 ```bash
-curl -X POST http://localhost:8080/chat/message \ 
-  -H 'Content-Type: application/json' \ 
+curl -X POST http://localhost:8080/chat/message \
+  -H 'Content-Type: application/json' \
   -d '{"message":"What is your return policy?"}'
 ```
 
@@ -184,6 +195,7 @@ curl 'http://localhost:8080/chat/history?sessionId=<uuid>'
 ---
 
 If you'd like, I can:
+
 - open a PR that adds this README to `main`
 - add a small pre-commit hook to prevent committing `.env` files
 - add basic tests for the chat service
