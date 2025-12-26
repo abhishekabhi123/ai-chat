@@ -15,6 +15,11 @@
 
 ---
 
+## 🔗 Live demo
+
+- Frontend (Vercel): https://ai-chat-olive-tau.vercel.app/
+- Backend: deployed on Render (ensure `DATABASE_URL`, `GROQ_API_KEY`/`OPENAI_API_KEY`, and `REDIS_*` are set in Render environment)
+
 ## 🧭 Getting started (local development)
 
 Prereqs
