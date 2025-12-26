@@ -1,0 +1,1 @@
+alter table messages rename column message to text;
