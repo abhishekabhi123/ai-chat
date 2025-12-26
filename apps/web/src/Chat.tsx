@@ -6,7 +6,8 @@ type ChatMsg = { sender: Sender; text: string };
 
 const LS_KEY = "spur.sessionId";
 
-const Chat = () => {
+export default function Chat() {
+  const [open, setOpen] = useState(true);
   const [sessionId, setSessionId] = useState<string | undefined>(() => {
     return localStorage.getItem(LS_KEY) || undefined;
   });
@@ -22,8 +23,9 @@ const Chat = () => {
     [text, loading]
   );
 
+  // Load history when widget opens and we have a sessionId
   useEffect(() => {
-    if (!sessionId) return;
+    if (!open || !sessionId) return;
 
     (async () => {
       try {
@@ -35,12 +37,13 @@ const Chat = () => {
         setLoadError(e?.message || "Failed to load history");
       }
     })();
-  }, [sessionId]);
+  }, [open, sessionId]);
 
-  // Auto-scroll on new messages
+  // Auto-scroll to bottom when messages change (only when open)
   useEffect(() => {
+    if (!open) return;
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [open, messages]);
 
   async function onSend() {
     const msg = text.trim();
@@ -53,7 +56,7 @@ const Chat = () => {
     try {
       const res = await sendMessage(msg, sessionId);
 
-      // persist sessionId in localStorage
+      // Persist sessionId in localStorage
       if (!sessionId || sessionId !== res.sessionId) {
         localStorage.setItem(LS_KEY, res.sessionId);
         setSessionId(res.sessionId);
@@ -70,55 +73,90 @@ const Chat = () => {
     }
   }
 
+  function resetSession() {
+    localStorage.removeItem(LS_KEY);
+    setSessionId(undefined);
+    setMessages([]);
+    setLoadError(null);
+  }
+
   return (
-    <div className="page">
-      <div className="chatCard">
-        <div className="chatHeader">
-          <div className="title">Spur Support (AI)</div>
-          <div className="meta">
-            {sessionId ? `Session: ${sessionId.slice(0, 8)}…` : "New session"}
+    <div className="chatWidgetRoot">
+      {/* Launcher */}
+      <button
+        className="chatLauncher"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        aria-controls="chat-panel"
+      >
+        {open ? "×" : "Chat"}
+      </button>
+
+      {/* Panel */}
+      {open ? (
+        <div
+          id="chat-panel"
+          className="chatPanel"
+          role="dialog"
+          aria-label="Support chat"
+        >
+          <div className="chatHeader">
+            <div className="title">Spur Support (AI)</div>
+            <div className="meta">
+              {sessionId ? `Session: ${sessionId.slice(0, 8)}…` : "New session"}
+            </div>
+          </div>
+
+          <div className="chatBody">
+            {loadError ? <div className="error">{loadError}</div> : null}
+
+            {messages.length === 0 ? (
+              <div className="empty">
+                Try: “What’s your return policy?” or “Do you ship to USA?”
+              </div>
+            ) : null}
+
+            {messages.map((m, idx) => (
+              <div key={idx} className={`msgRow ${m.sender}`}>
+                <div className="msgBubble">{m.text}</div>
+              </div>
+            ))}
+
+            {loading ? <div className="typing">Agent is typing…</div> : null}
+            <div ref={bottomRef} />
+          </div>
+
+          <div className="chatFooter">
+            <input
+              className="input"
+              value={text}
+              placeholder="Type your message…"
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  onSend();
+                }
+              }}
+              disabled={loading}
+            />
+            <button className="sendBtn" disabled={!canSend} onClick={onSend}>
+              Send
+            </button>
+          </div>
+
+          {/* Optional: small utility row */}
+          <div className="chatFooterTools">
+            <button
+              className="linkBtn"
+              onClick={resetSession}
+              disabled={loading}
+            >
+              New conversation
+            </button>
           </div>
         </div>
-
-        <div className="chatBody">
-          {loadError ? <div className="error">{loadError}</div> : null}
-
-          {messages.length === 0 ? (
-            <div className="empty">
-              Try: “What’s your return policy?” or “Do you ship to USA?”
-            </div>
-          ) : null}
-
-          {messages.map((m, idx) => (
-            <div key={idx} className={`msgRow ${m.sender}`}>
-              <div className="msgBubble">{m.text}</div>
-            </div>
-          ))}
-
-          {loading ? <div className="typing">Agent is typing…</div> : null}
-          <div ref={bottomRef} />
-        </div>
-
-        <div className="chatFooter">
-          <input
-            className="input"
-            value={text}
-            placeholder="Type your message…"
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                onSend();
-              }
-            }}
-          />
-          <button className="sendBtn" disabled={!canSend} onClick={onSend}>
-            Send
-          </button>
-        </div>
-      </div>
+      ) : null}
     </div>
   );
-};
-
-export default Chat;
+}

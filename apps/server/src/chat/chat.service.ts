@@ -1,8 +1,34 @@
 import { pool } from "../db/pool.js";
-import { openai } from "../llm/openai.js";
+import { llmClient } from "../llm/openai.js";
 import { SYSTEM_PROMPT } from "../llm/prompt.js";
+import { redis, isRedisReady } from "../redis/client.js";
 
 type Sender = "user" | "ai";
+
+function historyCacheKey(conversationId: string) {
+  return `history:v1:${conversationId}`;
+}
+export async function fetchHistoryCached(conversationId: string, limit = 200) {
+  if (isRedisReady()) {
+    const cached = await redis!.get(historyCacheKey(conversationId));
+    if (cached)
+      return JSON.parse(cached) as Array<{ sender: Sender; text: string }>;
+  }
+  const fresh = await fetchHistory(conversationId, limit);
+
+  if (isRedisReady()) {
+    // cache for 15 seconds (short TTL keeps it safe + fresh)
+    await redis!.set(historyCacheKey(conversationId), JSON.stringify(fresh), {
+      EX: 15,
+    });
+  }
+  return fresh;
+}
+
+export async function invalidateHistoryCache(conversationId: string) {
+  if (!isRedisReady()) return;
+  await redis!.del(historyCacheKey(conversationId));
+}
 
 export async function getOrCreateConversation(sessionId?: string) {
   if (sessionId) {
@@ -54,8 +80,8 @@ export async function generateReply(
     { role: "user" as const, content: userMessage },
   ];
 
-  const res = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+  const res = await llmClient.chat.completions.create({
+    model: "llama-3.3-70b-versatile",
     messages,
     temperature: 0.2,
     max_tokens: 300,

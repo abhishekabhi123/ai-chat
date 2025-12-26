@@ -3,10 +3,16 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { chatRouter } from "./chat/chat.routes.js";
 import { errorHandler } from "./middleware/errorHandler.js";
+import { ConnectRedisIfConfigured } from "./redis/client.js";
 
 dotenv.config();
 
+await ConnectRedisIfConfigured().catch((e) => {
+  // console.error("Redis not available, continuing without cache", e);
+});
+
 const app = express();
+app.set("trust proxy", 1);
 app.use(cors());
 app.use(express.json({ limit: "20kb" }));
 
