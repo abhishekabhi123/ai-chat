@@ -1,4 +1,5 @@
 export type Sender = "user" | "ai";
+const API_BASE = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, "") || "";
 
 export type HistoryResponse = {
   sessionId: string;
@@ -9,14 +10,14 @@ export async function fetchHistory(
   sessionId: string
 ): Promise<HistoryResponse> {
   const res = await fetch(
-    `/api/chat/history?sessionId=${encodeURIComponent(sessionId)}`
+    `${API_BASE}/chat/history?sessionId=${encodeURIComponent(sessionId)}`
   );
   if (!res.ok) throw new Error("Failed to load history");
   return res.json();
 }
 
 export async function sendMessage(message: string, sessionId?: string) {
-  const res = await fetch("/api/chat/message", {
+  const res = await fetch(`${API_BASE}/chat/message`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ message, sessionId }),
