@@ -193,11 +193,3 @@ curl 'http://localhost:8080/chat/history?sessionId=<uuid>'
 ```
 
 ---
-
-If you'd like, I can:
-
-- open a PR that adds this README to `main`
-- add a small pre-commit hook to prevent committing `.env` files
-- add basic tests for the chat service
-
-Feel free to tell me which follow-up you want me to take next. Cheers!
